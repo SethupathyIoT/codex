@@ -2,37 +2,43 @@
 import { BaseRecord } from '../types';
 
 // Safely access environment variables across different environments
-const getApiUrl = (): string => {
+const getSupabaseUrl = (): string => {
   try {
     // Check various common ways environment variables are injected
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_API_URL || '';
+    return env.VITE_SUPABASE_URL || '';
   } catch (e) {
     return '';
   }
 };
 
-const getApiToken = (): string => {
+const getSupabaseKey = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_API_TOKEN || '';
+    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
   } catch (e) {
     return '';
   }
 };
 
-const API_URL = getApiUrl();
-const API_TOKEN = getApiToken();
-
-const buildHeaders = () => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json;charset=utf-8',
-  };
-  if (API_TOKEN) {
-    headers['X-Api-Token'] = API_TOKEN;
+const getSupabaseTable = (): string => {
+  try {
+    const env = (globalThis as any).process?.env || (import.meta as any).env || {};
+    return env.VITE_SUPABASE_TABLE || 'records';
+  } catch (e) {
+    return 'records';
   }
-  return headers;
 };
+
+const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_KEY = getSupabaseKey();
+const SUPABASE_TABLE = getSupabaseTable();
+
+const buildHeaders = () => ({
+  'Content-Type': 'application/json;charset=utf-8',
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+});
 
 export interface ApiResponse {
   success: boolean;
@@ -42,25 +48,34 @@ export interface ApiResponse {
 
 export const cloudApi = {
   async saveRecord(record: BaseRecord): Promise<ApiResponse> {
-    if (!API_URL) {
-      console.warn('Cloud API URL not configured. Record will remain in local queue.');
-      return { success: false, message: 'Cloud API URL not configured' };
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.warn('Supabase not configured. Record will remain in local queue.');
+      return { success: false, message: 'Supabase not configured' };
     }
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
         method: 'POST',
         mode: 'cors',
-        headers: buildHeaders(),
-        body: JSON.stringify(record),
+        headers: {
+          ...buildHeaders(),
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          __backendId: record.__backendId,
+          type: record.type,
+          timestamp: record.timestamp,
+          businessId: record.businessId ?? null,
+          payload: record,
+        }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       return { 
         success: result.success || true, 
-        message: result.message || 'Saved to cloud successfully' 
+        message: result.message || 'Saved to Supabase successfully' 
       };
     } catch (error) {
       console.error('Cloud Sync Error:', error);
@@ -72,13 +87,19 @@ export const cloudApi = {
   },
 
   async fetchLatestRecords(): Promise<BaseRecord[]> {
-    if (!API_URL) return [];
+    if (!SUPABASE_URL || !SUPABASE_KEY) return [];
 
     try {
-      const response = await fetch(API_URL, { method: 'GET', headers: buildHeaders() });
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
+        { method: 'GET', headers: buildHeaders() }
+      );
       if (!response.ok) return [];
       const result = await response.json();
-      return Array.isArray(result) ? result : [];
+      if (!Array.isArray(result)) return [];
+      return result
+        .map((row: BaseRecord & { payload?: BaseRecord }) => row.payload ?? row)
+        .filter((row): row is BaseRecord => Boolean(row));
     } catch (error) {
       console.error('Fetch Records Error:', error);
       return [];

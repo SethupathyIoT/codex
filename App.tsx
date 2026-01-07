@@ -300,29 +300,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDownloadExcel = () => {
-    if (!selectedEmployeeLedger) return;
-    const { bills, payments, employee } = selectedEmployeeLedger;
-    let csv = `Employee Ledger: ${employee?.name}\nDate Range: ${ledgerFilter.from || 'Start'} to ${ledgerFilter.to || 'End'}\n\n`;
-    csv += "TYPE,ID,DATE,TOTAL,PAID/METHOD,STATUS\n";
-    bills.forEach(b => {
-      csv += `BILL,${b.billNumber},${b.date},${b.total},${b.paidAmount},${b.isPaid ? 'PAID' : 'DUE'}\n`;
-    });
-    payments.forEach(p => {
-      csv += `PAYMENT,N/A,${p.paymentDate},${p.paidAmount},${p.paymentMethod},N/A\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `ledger_${employee?.name.replace(' ', '_')}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const renderContent = () => {
     switch (currentPage) {
       case 'newbill': return <NewBill companies={companies} employees={employees} foodItems={foodItems} bills={bills} settings={settings} onSave={handleCreateBill} onCancel={() => setCurrentPage('dashboard')} onViewBill={setViewingBill} />;
@@ -419,13 +396,6 @@ const App: React.FC = () => {
                     </div>
                  </div>
                </div>
-               <button 
-                 onClick={handleDownloadExcel}
-                 className="px-6 py-3 bg-slate-400 text-white font-black rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-500 shadow-lg shadow-slate-100 transition-all"
-               >
-                 📥 Download Excel
-                 <span className="opacity-50 font-normal">Includes bills & payments</span>
-               </button>
             </div>
 
             {/* Summary Cards */}
