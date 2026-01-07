@@ -21,12 +21,36 @@ const getSupabaseKey = (): string => {
   }
 };
 
-const getSupabaseTable = (): string => {
-  try {
-    const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_SUPABASE_TABLE || 'records';
-  } catch (e) {
-    return 'records';
+const API_URL = getApiUrl();
+const API_TOKEN = getApiToken();
+
+const buildRecordsUrl = (businessId?: string, since?: number | null): string => {
+  if (!API_URL) return '';
+  const trimmed = API_URL.replace(/\/$/, '');
+  const base = trimmed.includes('/records') ? trimmed : `${trimmed}/records`;
+  const url = new URL(base);
+  if (businessId) {
+    url.searchParams.set('businessId', businessId);
+  }
+  if (since && Number.isFinite(since)) {
+    url.searchParams.set('since', String(since));
+  }
+  return url.toString();
+};
+
+const parseServerTime = (response: Response): number | null => {
+  const dateHeader = response.headers.get('Date');
+  if (!dateHeader) return null;
+  const parsed = Date.parse(dateHeader);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const buildHeaders = () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json;charset=utf-8',
+  };
+  if (API_TOKEN) {
+    headers['X-Api-Token'] = API_TOKEN;
   }
 };
 
@@ -44,6 +68,12 @@ export interface ApiResponse {
   success: boolean;
   message: string;
   data?: any;
+}
+
+export interface FetchRecordsResponse {
+  success: boolean;
+  records: BaseRecord[];
+  serverTime: number | null;
 }
 
 export const cloudApi = {
@@ -86,23 +116,19 @@ export const cloudApi = {
     }
   },
 
-  async fetchLatestRecords(): Promise<BaseRecord[]> {
-    if (!SUPABASE_URL || !SUPABASE_KEY) return [];
+  async fetchLatestRecords(params?: { businessId?: string; since?: number | null }): Promise<FetchRecordsResponse> {
+    if (!API_URL) return { success: false, records: [], serverTime: null };
 
     try {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
-        { method: 'GET', headers: buildHeaders() }
-      );
-      if (!response.ok) return [];
+      const url = buildRecordsUrl(params?.businessId, params?.since ?? null);
+      const response = await fetch(url, { method: 'GET', headers: buildHeaders() });
+      if (!response.ok) return { success: false, records: [], serverTime: null };
       const result = await response.json();
-      if (!Array.isArray(result)) return [];
-      return result
-        .map((row: BaseRecord & { payload?: BaseRecord }) => row.payload ?? row)
-        .filter((row): row is BaseRecord => Boolean(row));
+      const records = Array.isArray(result) ? result : [];
+      return { success: true, records, serverTime: parseServerTime(response) };
     } catch (error) {
       console.error('Fetch Records Error:', error);
-      return [];
+      return { success: false, records: [], serverTime: null };
     }
   }
 };
