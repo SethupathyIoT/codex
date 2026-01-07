@@ -5,6 +5,7 @@ export interface BaseRecord {
   __backendId: string;
   type: RecordType;
   timestamp: number;
+  businessId?: string;
 }
 
 export interface Company extends BaseRecord {

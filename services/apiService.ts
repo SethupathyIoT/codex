@@ -12,7 +12,27 @@ const getApiUrl = (): string => {
   }
 };
 
+const getApiToken = (): string => {
+  try {
+    const env = (globalThis as any).process?.env || (import.meta as any).env || {};
+    return env.VITE_API_TOKEN || '';
+  } catch (e) {
+    return '';
+  }
+};
+
 const API_URL = getApiUrl();
+const API_TOKEN = getApiToken();
+
+const buildHeaders = () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json;charset=utf-8',
+  };
+  if (API_TOKEN) {
+    headers['X-Api-Token'] = API_TOKEN;
+  }
+  return headers;
+};
 
 export interface ApiResponse {
   success: boolean;
@@ -31,9 +51,7 @@ export const cloudApi = {
       const response = await fetch(API_URL, {
         method: 'POST',
         mode: 'cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
+        headers: buildHeaders(),
         body: JSON.stringify(record),
       });
 
@@ -57,7 +75,7 @@ export const cloudApi = {
     if (!API_URL) return [];
 
     try {
-      const response = await fetch(API_URL, { method: 'GET' });
+      const response = await fetch(API_URL, { method: 'GET', headers: buildHeaders() });
       if (!response.ok) return [];
       const result = await response.json();
       return Array.isArray(result) ? result : [];
