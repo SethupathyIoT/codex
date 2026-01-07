@@ -53,13 +53,27 @@ const App: React.FC = () => {
     }
   }, [billToPrint]);
 
+  const getBusinessIdFromData = (currentData: BaseRecord[]) => {
+    const settingsRecord = currentData.find(record => record.type === 'settings') as SettingsType | undefined;
+    return settingsRecord?.__backendId || 'default';
+  };
+
   const performReconciliation = async (currentData: BaseRecord[]) => {
     try {
-      const cloudRecords = await cloudApi.fetchLatestRecords();
-      if (cloudRecords.length > 0) {
-        const reconciled = syncService.reconcile(currentData, cloudRecords);
+      const lastSyncAt = syncService.getLastSyncAt();
+      const businessIdForSync = getBusinessIdFromData(currentData);
+      const { success, records, serverTime } = await cloudApi.fetchLatestRecords({
+        businessId: businessIdForSync,
+        since: lastSyncAt
+      });
+      if (success && records.length > 0) {
+        const reconciled = syncService.reconcile(currentData, records);
         setData(reconciled);
         saveData(reconciled);
+      }
+      if (success) {
+        const nextSyncAt = syncService.getNextSyncTimestamp(records, serverTime);
+        syncService.setLastSyncAt(nextSyncAt);
       }
     } catch (e) { console.error("Reconciliation failed", e); }
     setSyncPendingCount(syncService.getQueue().length);
