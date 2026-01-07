@@ -186,6 +186,13 @@ const NewBill: React.FC<NewBillProps> = ({ companies, employees, foodItems, bill
                 <span className="font-black text-sm">{item.quantity}</span>
                 <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-xl font-black">+</button>
               </div>
+              <button
+                onClick={() => removeFromCart(item.id)}
+                className="text-slate-300 hover:text-rose-500 transition-colors text-xl"
+                aria-label={`Remove ${item.name}`}
+              >
+                ×
+              </button>
               <div className="font-black text-slate-950 text-right min-w-[60px]">
                 {APP_CONFIG.currency_symbol}{(item.price * item.quantity).toFixed(0)}
               </div>
@@ -231,9 +238,40 @@ const NewBill: React.FC<NewBillProps> = ({ companies, employees, foodItems, bill
                 {filteredEmployees.map(e => <option key={e.__backendId} value={e.__backendId}>{e.name}</option>)}
               </select>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Order Type</label>
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-xs font-black focus:border-indigo-500 outline-none"
+                >
+                  <option value="Dine-In">Dine-In</option>
+                  <option value="Takeaway">Takeaway</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-xs font-black focus:border-indigo-500 outline-none"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI / Online</option>
+                  <option value="Card">Bank Card</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-4 bg-white text-slate-600 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all border-2 border-slate-200 shadow-sm"
+            >
+              Cancel
+            </button>
             <button 
               onClick={() => handleSubmit(false)}
               className="flex-1 py-4 bg-slate-100 text-slate-950 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all border-2 border-slate-200 shadow-sm"
