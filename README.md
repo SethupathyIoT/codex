@@ -29,7 +29,7 @@ expose them via a web app endpoint.
 Create a new Google Sheet and add a single tab named `records` with the following header row:
 
 ```
-__backendId | type | businessId | timestamp | payload
+__backendId | type | timestamp | businessId | payload | updatedBy
 ```
 
 > Note: You can also create one tab per record type (`company`, `employee`, `bill`, `payment`, `foodItem`, `settings`),
