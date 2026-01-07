@@ -58,7 +58,7 @@ const SUPABASE_URL = getSupabaseUrl();
 const SUPABASE_KEY = getSupabaseKey();
 const SUPABASE_TABLE = getSupabaseTable();
 
-const buildHeaders = () => ({
+const createHeaders = () => ({
   'Content-Type': 'application/json;charset=utf-8',
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -88,7 +88,7 @@ export const cloudApi = {
         method: 'POST',
         mode: 'cors',
         headers: {
-          ...buildHeaders(),
+          ...createHeaders(),
           Prefer: 'resolution=merge-duplicates',
         },
         body: JSON.stringify({
@@ -120,9 +120,11 @@ export const cloudApi = {
     if (!API_URL) return { success: false, records: [], serverTime: null };
 
     try {
-      const url = buildRecordsUrl(params?.businessId, params?.since ?? null);
-      const response = await fetch(url, { method: 'GET', headers: buildHeaders() });
-      if (!response.ok) return { success: false, records: [], serverTime: null };
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
+        { method: 'GET', headers: createHeaders() }
+      );
+      if (!response.ok) return [];
       const result = await response.json();
       const records = Array.isArray(result) ? result : [];
       return { success: true, records, serverTime: parseServerTime(response) };
