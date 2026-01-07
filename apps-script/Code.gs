@@ -1,6 +1,6 @@
 const CONFIG = {
   sheetName: 'records',
-  headerRow: ['__backendId', 'type', 'businessId', 'timestamp', 'payload'],
+  headerRow: ['__backendId', 'type', 'timestamp', 'businessId', 'payload', 'updatedBy'],
   authToken: 'REPLACE_WITH_SHARED_SECRET'
 };
 
@@ -18,7 +18,15 @@ function doPost(e) {
   const recordId = record.__backendId || Utilities.getUuid();
   const rowIndex = findRowIndex_(sheet, recordId);
   const timestamp = record.timestamp || Date.now();
-  const rowValues = [recordId, record.type || '', record.businessId || '', timestamp, JSON.stringify(record)];
+  const payload = normalizePayload_(record.payload);
+  const rowValues = [
+    recordId,
+    record.type || '',
+    timestamp,
+    record.businessId || '',
+    payload,
+    record.updatedBy || ''
+  ];
 
   if (rowIndex) {
     sheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
@@ -43,18 +51,19 @@ function doGet(e) {
   const rows = data.slice(1);
 
   const records = rows
-    .map(row => {
-      try {
-        return JSON.parse(row[4]);
-      } catch (error) {
-        return null;
-      }
-    })
-    .filter(record => !!record)
+    .map(row => ({
+      __backendId: row[0],
+      type: row[1],
+      timestamp: row[2],
+      businessId: row[3],
+      payload: row[4],
+      updatedBy: row[5]
+    }))
+    .filter(record => !!record.__backendId)
     .filter(record => !businessId || record.businessId === businessId)
     .filter(record => {
       if (!sinceTimestamp) return true;
-      const recordTimestamp = parseTimestamp_(record.timestamp || record.updatedAt || record.createdAt || 0);
+      const recordTimestamp = parseTimestamp_(record.timestamp || 0);
       return recordTimestamp >= sinceTimestamp;
     });
 
@@ -98,6 +107,20 @@ function parseTimestamp_(value) {
   if (!Number.isNaN(numeric) && numeric > 0) return numeric;
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function normalizePayload_(payload) {
+  if (payload === undefined || payload === null) {
+    return '';
+  }
+  if (typeof payload === 'string') {
+    return payload;
+  }
+  try {
+    return JSON.stringify(payload);
+  } catch (error) {
+    return '';
+  }
 }
 
 function isAuthorized_(e) {
