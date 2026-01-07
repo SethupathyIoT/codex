@@ -89,8 +89,16 @@ const App: React.FC = () => {
     return s || { ...DEFAULT_SETTINGS, __backendId: 'default', type: 'settings', timestamp: 0 } as SettingsType;
   }, [data]);
 
+  const businessId = settings.__backendId || 'default';
+
   const saveRecord = (record: any) => {
-    const newRecord = { ...record, __backendId: record.__backendId || generateId(), timestamp: Date.now(), syncStatus: 'pending' } as BaseRecord;
+    const newRecord = {
+      ...record,
+      __backendId: record.__backendId || generateId(),
+      businessId: record.businessId || businessId,
+      timestamp: Date.now(),
+      syncStatus: 'pending'
+    } as BaseRecord;
     setData(prev => {
       const updated = [...prev, newRecord];
       saveData(updated);
@@ -103,7 +111,7 @@ const App: React.FC = () => {
 
   const updateRecord = (id: string, updates: any) => {
     setData(prev => {
-      const updated = prev.map(item => item.__backendId === id ? { ...item, ...updates, timestamp: Date.now(), syncStatus: 'pending' } : item);
+      const updated = prev.map(item => item.__backendId === id ? { ...item, ...updates, businessId: item.businessId || businessId, timestamp: Date.now(), syncStatus: 'pending' } : item);
       saveData(updated);
       const updatedRecord = updated.find(i => i.__backendId === id);
       if (updatedRecord) syncService.addToQueue(updatedRecord);
@@ -210,12 +218,17 @@ const App: React.FC = () => {
 
   const handleSeedData = () => {
     if (confirm('Load 3-month testing data?')) {
+      const seedBusinessId = settings.__backendId || 'default';
+      const seededRecords = SAMPLE_DATA.map(item => ({
+        ...item,
+        businessId: (item as BaseRecord).businessId || seedBusinessId
+      }));
       setData(prev => {
-        const updated = [...prev, ...SAMPLE_DATA];
+        const updated = [...prev, ...seededRecords];
         saveData(updated);
         return updated;
       });
-      SAMPLE_DATA.forEach(item => syncService.addToQueue(item as BaseRecord));
+      seededRecords.forEach(item => syncService.addToQueue(item as BaseRecord));
       triggerBackgroundSync();
       alert('Testing data loaded successfully.');
     }
