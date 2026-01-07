@@ -15,13 +15,7 @@ const getSupabaseUrl = (): string => {
 const getSupabaseKey = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return (
-      env.VITE_SUPABASE_ANON_KEY ||
-      env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      env.VITE_SUPABASE_PUBLIC_KEY ||
-      env.VITE_SUPABASE_KEY ||
-      ''
-    );
+    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
   } catch (e) {
     return '';
   }
@@ -46,24 +40,6 @@ const buildHeaders = () => ({
   Authorization: `Bearer ${SUPABASE_KEY}`,
 });
 
-const buildTableUrl = (params: string[] = []) => {
-  const query = params.length > 0 ? `?${params.join('&')}` : '';
-  return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}${query}`;
-};
-
-const parseJsonResponse = async (response: Response) => {
-  const contentLength = response.headers.get('content-length');
-  if (contentLength === '0') return {};
-  const text = await response.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.warn('Failed to parse JSON response', error);
-    return {};
-  }
-};
-
 export interface ApiResponse {
   success: boolean;
   message: string;
@@ -78,7 +54,7 @@ export const cloudApi = {
     }
 
     try {
-      const response = await fetch(buildTableUrl(['on_conflict=__backendId']), {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -96,7 +72,7 @@ export const cloudApi = {
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      const result = await parseJsonResponse(response);
+      const result = await response.json().catch(() => ({}));
       return { 
         success: result.success || true, 
         message: result.message || 'Saved to Supabase successfully' 
@@ -114,10 +90,10 @@ export const cloudApi = {
     if (!SUPABASE_URL || !SUPABASE_KEY) return [];
 
     try {
-      const response = await fetch(buildTableUrl(['select=payload,*', 'order=timestamp.asc']), {
-        method: 'GET',
-        headers: buildHeaders(),
-      });
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
+        { method: 'GET', headers: buildHeaders() }
+      );
       if (!response.ok) return [];
       const result = await response.json();
       if (!Array.isArray(result)) return [];

@@ -35,25 +35,13 @@ businessId (text, nullable)
 payload (jsonb)
 ```
 
-Example SQL:
-
-```
-create table if not exists public.records (
-  __backendId text primary key,
-  type text not null,
-  timestamp bigint not null,
-  businessId text,
-  payload jsonb not null
-);
-```
-
 ### 2) Configure the app
 
 Set the following environment variables (e.g., in `.env.local`):
 
 ```
 VITE_SUPABASE_URL=<your Supabase project URL>
-VITE_SUPABASE_ANON_KEY=<your anon/publishable key>
+VITE_SUPABASE_ANON_KEY=<your anon key>
 VITE_SUPABASE_TABLE=records
 ```
 
