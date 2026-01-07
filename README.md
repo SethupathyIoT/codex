@@ -53,7 +53,7 @@ Set the following environment variables (e.g., in `.env.local`):
 
 ```
 VITE_SUPABASE_URL=<your Supabase project URL>
-VITE_SUPABASE_ANON_KEY=<your anon key>
+VITE_SUPABASE_ANON_KEY=<your anon/publishable key>
 VITE_SUPABASE_TABLE=records
 ```
 

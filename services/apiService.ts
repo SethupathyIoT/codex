@@ -15,7 +15,13 @@ const getSupabaseUrl = (): string => {
 const getSupabaseKey = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
+    return (
+      env.VITE_SUPABASE_ANON_KEY ||
+      env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      env.VITE_SUPABASE_PUBLIC_KEY ||
+      env.VITE_SUPABASE_KEY ||
+      ''
+    );
   } catch (e) {
     return '';
   }
@@ -43,6 +49,19 @@ const buildHeaders = () => ({
 const buildTableUrl = (params: string[] = []) => {
   const query = params.length > 0 ? `?${params.join('&')}` : '';
   return `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}${query}`;
+};
+
+const parseJsonResponse = async (response: Response) => {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength === '0') return {};
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.warn('Failed to parse JSON response', error);
+    return {};
+  }
 };
 
 export interface ApiResponse {
@@ -77,7 +96,7 @@ export const cloudApi = {
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      const result = await response.json().catch(() => ({}));
+      const result = await parseJsonResponse(response);
       return { 
         success: result.success || true, 
         message: result.message || 'Saved to Supabase successfully' 
