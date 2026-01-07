@@ -34,7 +34,7 @@ const SUPABASE_URL = getSupabaseUrl();
 const SUPABASE_KEY = getSupabaseKey();
 const SUPABASE_TABLE = getSupabaseTable();
 
-const buildHeaders = () => ({
+const createHeaders = () => ({
   'Content-Type': 'application/json;charset=utf-8',
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -58,7 +58,7 @@ export const cloudApi = {
         method: 'POST',
         mode: 'cors',
         headers: {
-          ...buildHeaders(),
+          ...createHeaders(),
           Prefer: 'resolution=merge-duplicates',
         },
         body: JSON.stringify({
@@ -92,7 +92,7 @@ export const cloudApi = {
     try {
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
-        { method: 'GET', headers: buildHeaders() }
+        { method: 'GET', headers: createHeaders() }
       );
       if (!response.ok) return [];
       const result = await response.json();
