@@ -1,7 +1,6 @@
 
-import { BaseRecord, Bill } from '../types';
+import { BaseRecord } from '../types';
 import { cloudApi } from './apiService';
-import { loadAllData, saveData } from './storageService';
 
 const QUEUE_KEY = 'sync_queue';
 
