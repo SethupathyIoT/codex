@@ -2,7 +2,7 @@
 import { BaseRecord } from '../types';
 
 // Safely access environment variables across different environments
-const getSupabaseUrl = (): string => {
+const getApiUrl = (): string => {
   try {
     // Check various common ways environment variables are injected
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
@@ -12,14 +12,16 @@ const getSupabaseUrl = (): string => {
   }
 };
 
-const getSupabaseKey = (): string => {
+const getApiToken = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
+    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || env.VITE_API_TOKEN || '';
   } catch (e) {
     return '';
   }
 };
+
+const getSupabaseKey = (): string => getApiToken();
 
 const getSupabaseTable = (): string => {
   try {
@@ -30,11 +32,11 @@ const getSupabaseTable = (): string => {
   }
 };
 
-const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_URL = getApiUrl();
 const SUPABASE_KEY = getSupabaseKey();
 const SUPABASE_TABLE = getSupabaseTable();
 
-const buildHeaders = () => ({
+const createHeaders = () => ({
   'Content-Type': 'application/json;charset=utf-8',
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -58,7 +60,7 @@ export const cloudApi = {
         method: 'POST',
         mode: 'cors',
         headers: {
-          ...buildHeaders(),
+          ...createHeaders(),
           Prefer: 'resolution=merge-duplicates',
         },
         body: JSON.stringify({
@@ -92,7 +94,7 @@ export const cloudApi = {
     try {
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
-        { method: 'GET', headers: buildHeaders() }
+        { method: 'GET', headers: createHeaders() }
       );
       if (!response.ok) return [];
       const result = await response.json();
