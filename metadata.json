@@ -1,0 +1,5 @@
+{
+  "name": "ProBill - Company Employee Billing System",
+  "description": "A comprehensive billing management system designed for businesses to track employee food expenses, generate receipts, and manage company accounts with built-in reporting and thermal print support.",
+  "requestFramePermissions": []
+}
