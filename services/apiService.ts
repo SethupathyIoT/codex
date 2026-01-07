@@ -2,7 +2,7 @@
 import { BaseRecord } from '../types';
 
 // Safely access environment variables across different environments
-const getSupabaseUrl = (): string => {
+const getApiUrl = (): string => {
   try {
     // Check various common ways environment variables are injected
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
@@ -54,7 +54,7 @@ const buildHeaders = () => {
   }
 };
 
-const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_URL = getApiUrl();
 const SUPABASE_KEY = getSupabaseKey();
 const SUPABASE_TABLE = getSupabaseTable();
 
