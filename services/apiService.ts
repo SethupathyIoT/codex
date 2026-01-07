@@ -2,20 +2,20 @@
 import { BaseRecord } from '../types';
 
 // Safely access environment variables across different environments
-const getApiUrl = (): string => {
+const getSupabaseUrl = (): string => {
   try {
     // Check various common ways environment variables are injected
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_API_URL || '';
+    return env.VITE_SUPABASE_URL || '';
   } catch (e) {
     return '';
   }
 };
 
-const getApiToken = (): string => {
+const getSupabaseKey = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_API_TOKEN || '';
+    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
   } catch (e) {
     return '';
   }
@@ -52,8 +52,17 @@ const buildHeaders = () => {
   if (API_TOKEN) {
     headers['X-Api-Token'] = API_TOKEN;
   }
-  return headers;
 };
+
+const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_KEY = getSupabaseKey();
+const SUPABASE_TABLE = getSupabaseTable();
+
+const buildHeaders = () => ({
+  'Content-Type': 'application/json;charset=utf-8',
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+});
 
 export interface ApiResponse {
   success: boolean;
@@ -69,25 +78,34 @@ export interface FetchRecordsResponse {
 
 export const cloudApi = {
   async saveRecord(record: BaseRecord): Promise<ApiResponse> {
-    if (!API_URL) {
-      console.warn('Cloud API URL not configured. Record will remain in local queue.');
-      return { success: false, message: 'Cloud API URL not configured' };
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.warn('Supabase not configured. Record will remain in local queue.');
+      return { success: false, message: 'Supabase not configured' };
     }
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
         method: 'POST',
         mode: 'cors',
-        headers: buildHeaders(),
-        body: JSON.stringify(record),
+        headers: {
+          ...buildHeaders(),
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          __backendId: record.__backendId,
+          type: record.type,
+          timestamp: record.timestamp,
+          businessId: record.businessId ?? null,
+          payload: record,
+        }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       return { 
         success: result.success || true, 
-        message: result.message || 'Saved to cloud successfully' 
+        message: result.message || 'Saved to Supabase successfully' 
       };
     } catch (error) {
       console.error('Cloud Sync Error:', error);

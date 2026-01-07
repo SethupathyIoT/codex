@@ -82,7 +82,7 @@ const App: React.FC = () => {
   const triggerBackgroundSync = async () => {
     if (navigator.onLine) {
       const success = await syncService.processQueue();
-      if (success) setSyncPendingCount(0);
+      setSyncPendingCount(syncService.getQueue().length);
     }
   };
 
@@ -185,41 +185,47 @@ const App: React.FC = () => {
     setPaymentTarget(null);
   };
 
+  const normalizeName = (value: string) => value.trim().toLowerCase();
+
   const handleAddCompany = (companyData: any) => {
-    if (companies.some(c => c.name.toLowerCase() === companyData.name.toLowerCase())) {
-      alert(`Error: A company with name "${companyData.name}" already exists.`);
+    const companyName = companyData.name?.trim() || '';
+    if (companies.some(c => normalizeName(c.name) === normalizeName(companyName))) {
+      alert(`Error: A company with name "${companyName}" already exists.`);
       return false;
     }
-    saveRecord({ type: 'company', ...companyData });
+    saveRecord({ type: 'company', ...companyData, name: companyName });
     return true;
   };
 
   const handleUpdateCompany = (id: string, updates: any) => {
-    if (companies.some(c => c.__backendId !== id && c.name.toLowerCase() === updates.name.toLowerCase())) {
-      alert(`Error: Another company with name "${updates.name}" already exists.`);
+    const companyName = updates.name?.trim() || '';
+    if (companies.some(c => c.__backendId !== id && normalizeName(c.name) === normalizeName(companyName))) {
+      alert(`Error: Another company with name "${companyName}" already exists.`);
       return false;
     }
-    updateRecord(id, updates);
+    updateRecord(id, { ...updates, name: companyName });
     return true;
   };
 
   const handleAddEmployee = (employeeData: any) => {
-    if (employees.some(e => e.companyId === employeeData.companyId && e.name.toLowerCase() === employeeData.name.toLowerCase())) {
-      alert(`Error: Staff member "${employeeData.name}" already exists in this company.`);
+    const employeeName = employeeData.name?.trim() || '';
+    if (employees.some(e => e.companyId === employeeData.companyId && normalizeName(e.name) === normalizeName(employeeName))) {
+      alert(`Error: Staff member "${employeeName}" already exists in this company.`);
       return false;
     }
     const company = companies.find(c => c.__backendId === employeeData.companyId);
-    saveRecord({ type: 'employee', ...employeeData, companyName: company?.name || 'Unknown' });
+    saveRecord({ type: 'employee', ...employeeData, name: employeeName, companyName: company?.name || 'Unknown' });
     return true;
   };
 
   const handleUpdateEmployee = (id: string, updates: any) => {
-    if (employees.some(e => e.__backendId !== id && e.companyId === updates.companyId && e.name.toLowerCase() === updates.name.toLowerCase())) {
-      alert(`Error: Another staff member named "${updates.name}" already exists in this company.`);
+    const employeeName = updates.name?.trim() || '';
+    if (employees.some(e => e.__backendId !== id && e.companyId === updates.companyId && normalizeName(e.name) === normalizeName(employeeName))) {
+      alert(`Error: Another staff member named "${employeeName}" already exists in this company.`);
       return false;
     }
     const company = companies.find(c => c.__backendId === updates.companyId);
-    updateRecord(id, { ...updates, companyName: company?.name || 'Unknown' });
+    updateRecord(id, { ...updates, name: employeeName, companyName: company?.name || 'Unknown' });
     return true;
   };
 
@@ -306,29 +312,6 @@ const App: React.FC = () => {
       const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
       setLedgerFilter({ from: lastMonth.toISOString().split('T')[0], to: endOfLastMonth.toISOString().split('T')[0] });
     }
-  };
-
-  const handleDownloadExcel = () => {
-    if (!selectedEmployeeLedger) return;
-    const { bills, payments, employee } = selectedEmployeeLedger;
-    let csv = `Employee Ledger: ${employee?.name}\nDate Range: ${ledgerFilter.from || 'Start'} to ${ledgerFilter.to || 'End'}\n\n`;
-    csv += "TYPE,ID,DATE,TOTAL,PAID/METHOD,STATUS\n";
-    bills.forEach(b => {
-      csv += `BILL,${b.billNumber},${b.date},${b.total},${b.paidAmount},${b.isPaid ? 'PAID' : 'DUE'}\n`;
-    });
-    payments.forEach(p => {
-      csv += `PAYMENT,N/A,${p.paymentDate},${p.paidAmount},${p.paymentMethod},N/A\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `ledger_${employee?.name.replace(' ', '_')}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   };
 
   const renderContent = () => {
@@ -427,13 +410,6 @@ const App: React.FC = () => {
                     </div>
                  </div>
                </div>
-               <button 
-                 onClick={handleDownloadExcel}
-                 className="px-6 py-3 bg-slate-400 text-white font-black rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-500 shadow-lg shadow-slate-100 transition-all"
-               >
-                 📥 Download Excel
-                 <span className="opacity-50 font-normal">Includes bills & payments</span>
-               </button>
             </div>
 
             {/* Summary Cards */}
@@ -504,7 +480,6 @@ const App: React.FC = () => {
                     />
                   </div>
                   <div className="flex items-end gap-3 sm:col-span-2">
-                    <button className="flex-1 py-3.5 bg-indigo-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700">Apply Filter</button>
                     <button 
                       onClick={() => setLedgerFilter({ from: '', to: '' })}
                       className="flex-1 py-3.5 bg-white border-2 border-slate-200 text-slate-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-slate-50"
