@@ -3,6 +3,7 @@ import { BaseRecord } from '../types';
 import { cloudApi } from './apiService';
 
 const QUEUE_KEY = 'sync_queue';
+const LAST_SYNC_KEY = 'sync_last_ts';
 
 export const syncService = {
   getQueue(): BaseRecord[] {
@@ -14,6 +15,26 @@ export const syncService = {
     const queue = this.getQueue();
     queue.push(record);
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  },
+
+  getLastSyncAt(): number | null {
+    const stored = localStorage.getItem(LAST_SYNC_KEY);
+    if (!stored) return null;
+    const numeric = Number(stored);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  },
+
+  setLastSyncAt(timestamp: number) {
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return;
+    localStorage.setItem(LAST_SYNC_KEY, String(Math.floor(timestamp)));
+  },
+
+  getNextSyncTimestamp(records: BaseRecord[], serverTime?: number | null): number {
+    const maxRecordTimestamp = records.reduce((max, record) => {
+      return record.timestamp > max ? record.timestamp : max;
+    }, 0);
+    const candidate = Math.max(serverTime || 0, maxRecordTimestamp || 0);
+    return candidate > 0 ? candidate : Date.now();
   },
 
   async processQueue(): Promise<boolean> {
