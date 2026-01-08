@@ -45,17 +45,8 @@ const parseServerTime = (response: Response): number | null => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const buildHeaders = () => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json;charset=utf-8',
-  };
-  if (API_TOKEN) {
-    headers['X-Api-Token'] = API_TOKEN;
-  }
-};
-
 const SUPABASE_URL = getApiUrl();
-const SUPABASE_KEY = getSupabaseKey();
+const SUPABASE_KEY = getApiToken();
 const SUPABASE_TABLE = getSupabaseTable();
 
 const createHeaders = () => ({
