@@ -12,10 +12,10 @@ const getApiUrl = (): string => {
   }
 };
 
-const getSupabaseKey = (): string => {
+const getApiToken = (): string => {
   try {
     const env = (globalThis as any).process?.env || (import.meta as any).env || {};
-    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || '';
+    return env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_KEY || env.VITE_API_TOKEN || '';
   } catch (e) {
     return '';
   }
