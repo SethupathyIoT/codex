@@ -21,6 +21,15 @@ const getApiToken = (): string => {
   }
 };
 
+const getSupabaseTable = (): string => {
+  try {
+    const env = (globalThis as any).process?.env || (import.meta as any).env || {};
+    return env.VITE_SUPABASE_TABLE || 'records';
+  } catch (e) {
+    return 'records';
+  }
+};
+
 const API_URL = getApiUrl();
 const API_TOKEN = getApiToken();
 
@@ -111,11 +120,19 @@ export const cloudApi = {
     if (!API_URL) return { success: false, records: [], serverTime: null };
 
     try {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?select=payload,*&order=timestamp.asc`,
-        { method: 'GET', headers: createHeaders() }
-      );
-      if (!response.ok) return [];
+      const url = new URL(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`);
+      url.searchParams.set('select', 'payload,*');
+      url.searchParams.set('order', 'timestamp.asc');
+      if (params?.businessId) {
+        url.searchParams.set('businessId', `eq.${params.businessId}`);
+      }
+      if (params?.since && Number.isFinite(params.since)) {
+        url.searchParams.set('timestamp', `gt.${params.since}`);
+      }
+      const response = await fetch(url.toString(), { method: 'GET', headers: createHeaders() });
+      if (!response.ok) {
+        return { success: false, records: [], serverTime: parseServerTime(response) };
+      }
       const result = await response.json();
       const records = Array.isArray(result) ? result : [];
       return { success: true, records, serverTime: parseServerTime(response) };
